@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Poetry
+poetry.lock
+
+# Environment variables
+.env
+.env.local
+
+# Data directories
+data/chroma_db/
+data/generated_content/*.png
+data/generated_content/*.mp4
+data/generated_content/*.jpg
+data/generated_content/*.jpeg
+data/brand_metadata/*.csv
+data/brand_metadata/*.xlsx
+data/brand_metadata/*.xls
+!data/brand_metadata/sample_brand_template.csv
+
+# Model cache
+.cache/
+models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Hugging Face cache
+~/.cache/huggingface/
