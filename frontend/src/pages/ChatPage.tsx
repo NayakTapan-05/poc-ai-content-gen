@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Send, Download, Loader2, Sparkles, Plus } from 'lucide-react';
@@ -16,13 +15,6 @@ interface Message {
   media_url?: string;
   media_type?: 'image' | 'video';
   timestamp: string;
-}
-
-interface Session {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export function ChatPage() {
@@ -59,7 +51,6 @@ export function ChatPage() {
   const fetchSessions = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/sessions`);
-      setSessions(response.data || []);
       
       if (response.data.length === 0) {
         await createNewSession();
@@ -79,7 +70,6 @@ export function ChatPage() {
         name: `Chat ${new Date().toLocaleString()}`
       });
       const newSession = response.data;
-      setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(newSession.id);
       setMessages([]);
     } catch (error) {
@@ -96,11 +86,6 @@ export function ChatPage() {
     }
   };
 
-  const switchSession = async (sessionId: string) => {
-    setCurrentSessionId(sessionId);
-    await loadSessionHistory(sessionId);
-  };
-
   const handleSend = async () => {
     if (!input.trim() || !currentSessionId) return;
 
@@ -109,7 +94,7 @@ export function ChatPage() {
     setIsGenerating(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/agent/chat`, {
+      await axios.post(`${API_URL}/api/agent/chat`, {
         message: userPrompt,
         session_id: currentSessionId,
         brand_id: selectedBrand === 'none' ? null : selectedBrand
@@ -210,17 +195,17 @@ export function ChatPage() {
                 <div className={`max-w-2xl ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-900'} rounded-2xl px-6 py-4`}>
                   <p className="text-sm mb-2">{message.content}</p>
                   
-                  {message.mediaUrl && message.mediaType === 'image' && (
+                  {message.media_url && message.media_type === 'image' && (
                     <div className="mt-4 space-y-2">
                       <img
-                        src={message.mediaUrl}
+                        src={message.media_url}
                         alt="Generated content"
                         className="rounded-lg max-w-full h-auto"
                       />
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleDownload(message.mediaUrl!, 'image')}
+                        onClick={() => handleDownload(message.media_url!, 'image')}
                         className="w-full"
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -229,17 +214,17 @@ export function ChatPage() {
                     </div>
                   )}
 
-                  {message.mediaUrl && message.mediaType === 'video' && (
+                  {message.media_url && message.media_type === 'video' && (
                     <div className="mt-4 space-y-2">
                       <video
-                        src={message.mediaUrl}
+                        src={message.media_url}
                         controls
                         className="rounded-lg max-w-full h-auto"
                       />
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleDownload(message.mediaUrl!, 'video')}
+                        onClick={() => handleDownload(message.media_url!, 'video')}
                         className="w-full"
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -249,7 +234,7 @@ export function ChatPage() {
                   )}
 
                   <p className="text-xs opacity-70 mt-2">
-                    {message.timestamp.toLocaleTimeString()}
+                    {new Date(message.timestamp).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
@@ -291,9 +276,8 @@ export function ChatPage() {
             </div>
             <p className="text-xs text-slate-500 mt-2">
               <Sparkles className="w-3 h-3 inline mr-1" />
-              Powered by Stable Diffusion XL & ModelScope
+              Powered by Stable Diffusion & Stable Video Diffusion
               {selectedBrand !== 'none' && ` • Using ${selectedBrand} brand metadata`}
-              {generationMode !== 'auto' && ` • Mode: ${generationMode}`}
             </p>
           </div>
         </div>
