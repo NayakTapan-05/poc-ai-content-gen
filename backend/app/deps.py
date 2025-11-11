@@ -107,3 +107,18 @@ async def get_db():
         _db_connection = Database(config.DATABASE_PATH)
         await _db_connection.init_db()
     return _db_connection
+
+
+async def get_ingestion_service():
+    """Get ingestion service instance."""
+    from app.services.rag.ingestion import IngestionService
+    vector_adapter = get_vector_adapter()
+    db = await get_db()
+    return IngestionService(vector_adapter, db)
+
+
+def get_retrieval_service():
+    """Get retrieval service instance."""
+    from app.services.rag.retrieval import RetrievalService
+    vector_adapter = get_vector_adapter()
+    return RetrievalService(vector_adapter)

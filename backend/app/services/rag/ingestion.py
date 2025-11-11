@@ -217,3 +217,124 @@ class IngestionService:
             "total_vectors": total_vectors,
             "results": results
         }
+    
+    async def ingest_text(self, text: str, brand_id: str, filename: str, doc_id: Optional[str] = None) -> Dict:
+        """
+        Ingest raw text directly into the RAG pipeline.
+        Returns dict with document_id, chunks, vectors.
+        """
+        logger.info(f"Ingesting text for brand: {brand_id}, filename: {filename}")
+        
+        if not text:
+            raise ValueError("Text cannot be empty")
+        
+        chunks = self.chunk_text(text)
+        if not chunks:
+            raise ValueError("No chunks created from text")
+        
+        logger.info(f"Created {len(chunks)} chunks from text")
+        
+        if not doc_id:
+            doc_id = str(uuid.uuid4())
+        
+        await self.db.save_document(
+            doc_id=doc_id,
+            brand_id=brand_id,
+            filename=filename,
+            file_type=".txt",
+            metadata={"text_length": len(text), "chunks_count": len(chunks)}
+        )
+        
+        chunk_texts = []
+        chunk_metadatas = []
+        chunk_ids = []
+        
+        for i, chunk_text in enumerate(chunks):
+            chunk_id = f"{doc_id}_chunk_{i}"
+            chunk_ids.append(chunk_id)
+            chunk_texts.append(chunk_text)
+            chunk_metadatas.append({
+                "chunk_id": chunk_id,
+                "document_id": doc_id,
+                "brand_id": brand_id,
+                "chunk_index": i,
+                "text": chunk_text
+            })
+            
+            await self.db.save_chunk(
+                chunk_id=chunk_id,
+                document_id=doc_id,
+                brand_id=brand_id,
+                content=chunk_text,
+                chunk_index=i
+            )
+        
+        vector_indices = self.vector_adapter.add_texts(
+            brand_id=brand_id,
+            texts=chunk_texts,
+            metadatas=chunk_metadatas
+        )
+        
+        for chunk_id, vector_idx in zip(chunk_ids, vector_indices):
+            vector_id = f"{chunk_id}_vec"
+            await self.db.save_vector(
+                vector_id=vector_id,
+                chunk_id=chunk_id,
+                brand_id=brand_id,
+                vector_index=vector_idx
+            )
+        
+        logger.info(f"Successfully ingested text: {len(chunks)} chunks, {len(vector_indices)} vectors")
+        
+        return {
+            "document_id": doc_id,
+            "brand_id": brand_id,
+            "filename": filename,
+            "chunks": len(chunks),
+            "vectors": len(vector_indices)
+        }
+    
+    async def ingest_pdf(self, pdf_bytes: bytes, brand_id: str, filename: str) -> Dict:
+        """
+        Ingest PDF from bytes into the RAG pipeline.
+        Returns dict with document_id, chunks, vectors.
+        """
+        logger.info(f"Ingesting PDF for brand: {brand_id}, filename: {filename}")
+        
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF bytes: {e}")
+            raise ValueError(f"Failed to extract text from PDF: {e}")
+        
+        if not text:
+            raise ValueError("No text extracted from PDF")
+        
+        return await self.ingest_text(text, brand_id, filename)
+    
+    async def reindex_brand(self, brand_id: str, texts: List[str], metadatas: List[Dict]) -> Dict:
+        """
+        Rebuild FAISS index for a brand from existing texts.
+        Returns dict with vectors count.
+        """
+        logger.info(f"Reindexing brand: {brand_id} with {len(texts)} texts")
+        
+        if not texts:
+            return {"vectors": 0}
+        
+        vector_indices = self.vector_adapter.add_texts(
+            brand_id=brand_id,
+            texts=texts,
+            metadatas=metadatas
+        )
+        
+        logger.info(f"Successfully reindexed {brand_id}: {len(vector_indices)} vectors")
+        
+        return {
+            "brand_id": brand_id,
+            "vectors": len(vector_indices)
+        }

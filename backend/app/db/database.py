@@ -79,9 +79,37 @@ class Database:
                 )
             """)
             
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS brands (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    last_ingested_at TEXT,
+                    metadata TEXT
+                )
+            """)
+            
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT,
+                    job_type TEXT NOT NULL,
+                    model_id TEXT,
+                    status TEXT NOT NULL,
+                    input_data TEXT,
+                    output_data TEXT,
+                    created_at TEXT NOT NULL,
+                    completed_at TEXT,
+                    metadata TEXT,
+                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL
+                )
+            """)
+            
             await db.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id)")
             await db.execute("CREATE INDEX IF NOT EXISTS idx_chunks_brand ON chunks(brand_id)")
             await db.execute("CREATE INDEX IF NOT EXISTS idx_vectors_brand ON vectors(brand_id)")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_session ON jobs(session_id)")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_type ON jobs(job_type)")
             
             await db.commit()
             logger.info(f"Database initialized at {self.db_path}")
@@ -213,5 +241,86 @@ class Database:
             await db.execute("DELETE FROM vectors WHERE brand_id = ?", (brand_id,))
             await db.execute("DELETE FROM chunks WHERE brand_id = ?", (brand_id,))
             cursor = await db.execute("DELETE FROM documents WHERE brand_id = ?", (brand_id,))
+            await db.execute("DELETE FROM brands WHERE id = ?", (brand_id,))
             await db.commit()
             return cursor.rowcount
+    
+    async def create_brand(self, brand_id: str, name: str, metadata: Optional[Dict] = None) -> Dict:
+        """Create or update a brand."""
+        now = datetime.utcnow().isoformat()
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """INSERT OR REPLACE INTO brands (id, name, created_at, last_ingested_at, metadata)
+                   VALUES (?, ?, COALESCE((SELECT created_at FROM brands WHERE id = ?), ?), ?, ?)""",
+                (brand_id, name, brand_id, now, now, json.dumps(metadata or {}))
+            )
+            await db.commit()
+        return {"id": brand_id, "name": name, "last_ingested_at": now}
+    
+    async def get_brand(self, brand_id: str) -> Optional[Dict]:
+        """Get brand by ID."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM brands WHERE id = ?", (brand_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return dict(row)
+        return None
+    
+    async def list_brands_with_stats(self) -> List[Dict]:
+        """List all brands with document/chunk/vector counts."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("""
+                SELECT 
+                    b.id,
+                    b.name,
+                    b.created_at,
+                    b.last_ingested_at,
+                    COUNT(DISTINCT d.id) as documents,
+                    COUNT(DISTINCT c.id) as chunks,
+                    COUNT(DISTINCT v.id) as vectors
+                FROM brands b
+                LEFT JOIN documents d ON b.id = d.brand_id
+                LEFT JOIN chunks c ON b.id = c.brand_id
+                LEFT JOIN vectors v ON b.id = v.brand_id
+                GROUP BY b.id
+                ORDER BY b.last_ingested_at DESC
+            """) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def create_job(self, job_id: str, job_type: str, session_id: Optional[str] = None,
+                        model_id: Optional[str] = None, input_data: Optional[Dict] = None,
+                        metadata: Optional[Dict] = None) -> Dict:
+        """Create a new job record."""
+        now = datetime.utcnow().isoformat()
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """INSERT INTO jobs (id, session_id, job_type, model_id, status, input_data, created_at, metadata)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (job_id, session_id, job_type, model_id, "pending", json.dumps(input_data or {}), now, json.dumps(metadata or {}))
+            )
+            await db.commit()
+        return {"id": job_id, "job_type": job_type, "status": "pending", "created_at": now}
+    
+    async def update_job(self, job_id: str, status: str, output_data: Optional[Dict] = None) -> bool:
+        """Update job status and output."""
+        now = datetime.utcnow().isoformat()
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                """UPDATE jobs SET status = ?, output_data = ?, completed_at = ? WHERE id = ?""",
+                (status, json.dumps(output_data or {}), now, job_id)
+            )
+            await db.commit()
+            return cursor.rowcount > 0
+    
+    async def get_job(self, job_id: str) -> Optional[Dict]:
+        """Get job by ID."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return dict(row)
+        return None

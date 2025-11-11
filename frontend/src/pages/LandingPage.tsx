@@ -16,6 +16,20 @@ export function LandingPage() {
             <p className="text-xs text-slate-600">by Unilever</p>
           </div>
         </div>
+        <div className="flex items-center gap-4">
+          <Link to="/brand-data">
+            <Button variant="outline" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Add Brand Knowledge
+            </Button>
+          </Link>
+          <Link to="/chat">
+            <Button className="gap-2">
+              Start Creating
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
       </header>
 
       <div className="container mx-auto px-4 pt-20 pb-16">

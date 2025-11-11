@@ -10,7 +10,7 @@ import logging
 
 from app import config
 from app.deps import get_db
-from app.routers import session, history, templates, rag, generate, agent
+from app.routers import session, history, templates, rag, generate, agent, brand, models
 
 logging.basicConfig(
     level=getattr(logging, config.LOG_LEVEL),
@@ -57,6 +57,8 @@ app.include_router(templates.router)
 app.include_router(rag.router)
 app.include_router(generate.router)
 app.include_router(agent.router)
+app.include_router(brand.router)
+app.include_router(models.router)
 
 
 @app.get("/")

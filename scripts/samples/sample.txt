@@ -1,0 +1,35 @@
+Sample Brand Knowledge Document
+
+Brand: TechCorp
+Industry: Technology Solutions
+
+Brand Voice:
+Our brand voice is innovative, forward-thinking, and accessible. We speak with authority but remain approachable and human.
+
+Visual Identity:
+- Primary colors: Deep blue (#003366) and bright cyan (#00BFFF)
+- Typography: Modern sans-serif fonts
+- Imagery: Clean, high-tech visuals with people using technology in real-world scenarios
+
+Target Audience:
+- Business decision-makers aged 35-55
+- IT professionals and technology enthusiasts
+- Companies seeking digital transformation
+
+Key Messages:
+- Innovation that drives business forward
+- Technology made simple and accessible
+- Trusted partner for digital transformation
+- Human-centered technology solutions
+
+Brand Values:
+- Innovation
+- Reliability
+- Customer success
+- Continuous improvement
+
+Tone Guidelines:
+- Professional but not stuffy
+- Confident but not arrogant
+- Technical but not jargon-heavy
+- Helpful and solution-oriented
