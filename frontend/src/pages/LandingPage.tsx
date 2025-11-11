@@ -47,7 +47,7 @@ export function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <Link to="/chat/image">
+            <Link to="/chat">
               <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-2 border-transparent hover:border-blue-500 bg-white">
                 <CardContent className="pt-12 pb-12 text-center space-y-6">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 mx-auto flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -67,7 +67,7 @@ export function LandingPage() {
               </Card>
             </Link>
 
-            <Link to="/chat/video">
+            <Link to="/chat">
               <Card className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-2 border-transparent hover:border-cyan-500 bg-white">
                 <CardContent className="pt-12 pb-12 text-center space-y-6">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-600 mx-auto flex items-center justify-center group-hover:scale-110 transition-transform">

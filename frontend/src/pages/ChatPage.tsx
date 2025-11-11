@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Send, Download, Loader2, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { ArrowLeft, Send, Download, Loader2, Image as ImageIcon, Video as VideoIcon, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -17,17 +17,13 @@ interface Message {
   timestamp: Date;
 }
 
-interface Brand {
-  name: string;
-}
-
 export function ChatPage() {
-  const { type } = useParams<{ type: 'image' | 'video' }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [brands, setBrands] = useState<string[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<string>('');
+  const [selectedBrand, setSelectedBrand] = useState<string>('none');
+  const [generationMode, setGenerationMode] = useState<'auto' | 'image' | 'video'>('auto');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,11 +31,11 @@ export function ChatPage() {
     setMessages([
       {
         role: 'assistant',
-        content: `Welcome to ${type === 'image' ? 'Image' : 'Video'} Generation! I can help you create brand-compliant ${type}s using AI. ${brands.length > 0 ? 'Select a brand and describe what you want to create.' : 'Upload brand metadata first or describe what you want to create without brand context.'}`,
+        content: `Welcome to AI Content Generator! I can help you create brand-compliant images and videos using AI. Simply describe what you want to create, and I'll generate it for you. You can also select a brand for enhanced, brand-compliant content.`,
         timestamp: new Date()
       }
     ]);
-  }, [type]);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -58,6 +54,20 @@ export function ChatPage() {
     }
   };
 
+  const detectGenerationType = (prompt: string): 'image' | 'video' => {
+    const lowerPrompt = prompt.toLowerCase();
+    const videoKeywords = ['video', 'clip', 'animate', 'animation', 'frames', 'fps', 'seconds', 'movie', 'footage'];
+    const imageKeywords = ['image', 'picture', 'photo', 'poster', 'banner'];
+    
+    const hasVideoKeyword = videoKeywords.some(keyword => lowerPrompt.includes(keyword));
+    const hasImageKeyword = imageKeywords.some(keyword => lowerPrompt.includes(keyword));
+    
+    if (hasVideoKeyword && !hasImageKeyword) return 'video';
+    if (hasImageKeyword && !hasVideoKeyword) return 'image';
+    
+    return 'image';
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -68,22 +78,31 @@ export function ChatPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userPrompt = input;
     setInput('');
     setIsGenerating(true);
 
     try {
-      const endpoint = type === 'image' ? '/api/generate/image' : '/api/generate/video';
+      let actualType: 'image' | 'video';
+      
+      if (generationMode === 'auto') {
+        actualType = detectGenerationType(userPrompt);
+      } else {
+        actualType = generationMode;
+      }
+      
+      const endpoint = actualType === 'image' ? '/api/generate/image' : '/api/generate/video';
       
       const response = await axios.post(`${API_URL}${endpoint}`, {
-        prompt: input,
-        brand_name: selectedBrand || null
+        prompt: userPrompt,
+        brand_name: selectedBrand === 'none' ? null : selectedBrand
       });
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: `Generated ${type} successfully! ${selectedBrand ? `Using brand: ${selectedBrand}` : ''}`,
+        content: `Generated ${actualType} successfully! ${selectedBrand ? `Using brand: ${selectedBrand}` : ''}`,
         mediaUrl: `${API_URL}${response.data.media_url}`,
-        mediaType: type,
+        mediaType: actualType,
         timestamp: new Date()
       };
 
@@ -91,7 +110,7 @@ export function ChatPage() {
     } catch (error: any) {
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Error generating ${type}: ${error.response?.data?.detail || error.message}. ${error.response?.status === 404 ? 'Please upload brand metadata first.' : ''}`,
+        content: `Error generating content: ${error.response?.data?.detail || error.message}. ${error.response?.status === 404 ? 'Please upload brand metadata first.' : ''}`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -135,31 +154,62 @@ export function ChatPage() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900">
-                    {type === 'image' ? 'Image' : 'Video'} Generation
+                    AI Content Generator
                   </h1>
-                  <p className="text-xs text-slate-600">AI-Powered Creative Studio</p>
+                  <p className="text-xs text-slate-600">Image & Video Generation</p>
                 </div>
               </div>
             </div>
 
-            {brands.length > 0 && (
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">Brand:</span>
-                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select brand (optional)" />
+                <span className="text-sm text-slate-600">Mode:</span>
+                <Select value={generationMode} onValueChange={(value: 'auto' | 'image' | 'video') => setGenerationMode(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No brand</SelectItem>
-                    {brands.map(brand => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="auto">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Auto
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="image">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Image
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="video">
+                      <div className="flex items-center gap-2">
+                        <VideoIcon className="w-4 h-4" />
+                        Video
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
+
+              {brands.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600">Brand:</span>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No brand</SelectItem>
+                      {brands.map(brand => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -224,7 +274,7 @@ export function ChatPage() {
               <div className="flex justify-start">
                 <div className="bg-slate-100 text-slate-900 rounded-2xl px-6 py-4 flex items-center gap-3">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                  <span>Generating {type}...</span>
+                  <span>Generating content...</span>
                 </div>
               </div>
             )}
@@ -238,7 +288,7 @@ export function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && !isGenerating && handleSend()}
-                placeholder={`Describe the ${type} you want to create...`}
+                placeholder="Describe what you want to create (image or video)..."
                 disabled={isGenerating}
                 className="flex-1"
               />
@@ -255,18 +305,10 @@ export function ChatPage() {
               </Button>
             </div>
             <p className="text-xs text-slate-500 mt-2">
-              {type === 'image' ? (
-                <>
-                  <ImageIcon className="w-3 h-3 inline mr-1" />
-                  Powered by Stable Diffusion XL
-                </>
-              ) : (
-                <>
-                  <VideoIcon className="w-3 h-3 inline mr-1" />
-                  Powered by ModelScope Text-to-Video
-                </>
-              )}
-              {selectedBrand && ` • Using ${selectedBrand} brand metadata`}
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              Powered by Stable Diffusion XL & ModelScope
+              {selectedBrand !== 'none' && ` • Using ${selectedBrand} brand metadata`}
+              {generationMode !== 'auto' && ` • Mode: ${generationMode}`}
             </p>
           </div>
         </div>
