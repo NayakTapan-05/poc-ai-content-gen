@@ -1,326 +1,325 @@
-# AI Content Generation POC with RAG Pipeline
+# AI Content Generation POC
 
-A proof-of-concept application for AI-powered image and video generation with Retrieval-Augmented Generation (RAG) pipeline for brand-compliant content creation.
-
-## Overview
-
-This POC demonstrates a complete AI content generation system that uses:
-- **ChromaDB** vector database for storing brand metadata
-- **Stable Diffusion XL** for image generation
-- **ModelScope Text-to-Video** for video generation
-- **RAG Pipeline** to enhance prompts with brand-specific metadata
-- **React + TypeScript** frontend with chat interface
-- **FastAPI** backend with RESTful API
-
-## Architecture
-
-### Backend
-- **FastAPI** - Modern Python web framework
-- **ChromaDB** - Vector database for brand metadata storage
-- **Stable Diffusion XL** - Open-source image generation model
-- **ModelScope** - Open-source text-to-video model
-- **RAG Pipeline** - Retrieves brand metadata and enhances prompts
-
-### Frontend
-- **React 18** with TypeScript
-- **Vite** - Fast build tool
-- **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Pre-built UI components
-- **React Router** - Client-side routing
-- **Axios** - HTTP client
+A local-first proof-of-concept for AI-powered content generation using **100% open-source models**. Generate brand-compliant images and videos with RAG-enhanced prompts, multi-session chat, and intelligent content routing.
 
 ## Features
 
-### Core Functionality
-1. **Two Generation Modes**
-   - Image Generation (Stable Diffusion XL)
-   - Video Generation (ModelScope)
+- **🎨 Real Image Generation**: Stable Diffusion Turbo (GPU) or ONNX (CPU fallback)
+- **🎬 Real Video Generation**: Stable Video Diffusion for both GPU and CPU
+- **🧠 RAG Pipeline**: FAISS + sentence-transformers for brand knowledge retrieval
+- **💬 Multi-Session Chat**: SQLite-backed persistent chat history
+- **🎯 Template-First Generation**: Pre-defined templates for consistent content
+- **🛡️ Safety Checks**: Detoxify (text) + NudeNet (image) content moderation
+- **🤖 Intelligent Agent**: Auto-detects intent (Q&A vs image vs video generation)
+- **⚡ GPU/CPU Auto-Detection**: Automatically uses best available hardware
 
-2. **Chat Interface**
-   - Interactive conversation-based content generation
-   - Real-time generation status
-   - Content preview and download
-
-3. **RAG Pipeline**
-   - Upload brand metadata (CSV/Excel)
-   - Automatic brand metadata retrieval
-   - Prompt enhancement with brand context
-
-4. **Brand Management**
-   - Upload brand metadata files
-   - List available brands
-   - Select brand for generation
-   - Delete brand data
-
-## Setup Instructions
+## Quick Start
 
 ### Prerequisites
-- Python 3.12 or higher
-- Node.js 18 or higher
-- Poetry (Python package manager)
-- npm or yarn
-- CUDA-compatible GPU (recommended for faster generation)
 
-### Backend Setup
+- Python 3.12+ with Poetry
+- Node.js 18+ with npm
+- (Optional) CUDA-capable GPU for faster generation
 
-1. Navigate to the backend directory:
+### Installation
+
 ```bash
-cd backend
+# Clone the repository
+git clone <repo-url>
+cd poc-ai-content-gen
+
+# Install all dependencies (backend + frontend)
+make setup
 ```
 
-2. Install dependencies using Poetry:
+### Running Locally
+
 ```bash
-poetry install
+# Start both API and web servers
+make dev
+
+# Or start them separately:
+make api  # Backend at http://localhost:8000
+make web  # Frontend at http://localhost:5173
 ```
 
-3. Start the backend server:
+The application will automatically:
+- Initialize the SQLite database
+- Create necessary data directories
+- Detect GPU availability and configure models accordingly
+
+### First Steps
+
+1. **Upload Brand Documents** (optional):
+   - Navigate to the landing page
+   - Upload brand guidelines (PDF, DOCX, TXT, CSV)
+   - Documents are processed and indexed for RAG retrieval
+
+2. **Start Chatting**:
+   - Go to the Chat page
+   - Select a brand (if uploaded) or use without brand context
+   - Describe what you want to create
+   - The agent will automatically detect if you want an image or video
+
+3. **Generate Content**:
+   - Images: "Create a product photo of a coffee mug"
+   - Videos: "Generate a video of waves on a beach"
+   - Q&A: "What is our brand's tone of voice?"
+
+## Architecture
+
+### Backend (FastAPI)
+
+```
+backend/
+├── app/
+│   ├── main.py              # FastAPI application
+│   ├── config.py            # Configuration management
+│   ├── deps.py              # Dependency injection
+│   ├── adapters/            # External service adapters
+│   │   ├── embeddings_local.py      # sentence-transformers
+│   │   ├── vector_faiss.py          # FAISS vector store
+│   │   ├── image_provider_local.py  # SD-Turbo/ONNX
+│   │   ├── video_provider_local.py  # Stable Video Diffusion
+│   │   ├── caption_local.py         # BLIP captioning
+│   │   └── safety_local.py          # Detoxify + NudeNet
+│   ├── services/            # Business logic
+│   │   ├── rag/             # RAG pipeline
+│   │   ├── generation/      # Content generation
+│   │   ├── agent/           # Intent detection & routing
+│   │   └── safety.py        # Safety checks
+│   ├── routers/             # API endpoints
+│   │   ├── session.py       # Session management
+│   │   ├── history.py       # Chat history
+│   │   ├── templates.py     # Content templates
+│   │   ├── rag.py           # Document ingestion
+│   │   ├── generate.py      # Direct generation
+│   │   └── agent.py         # Intelligent chat
+│   └── db/                  # Database
+│       └── database.py      # SQLite operations
+└── tests/
+    └── test_acceptance.py   # Acceptance tests
+```
+
+### Frontend (React + TypeScript)
+
+```
+frontend/
+├── src/
+│   ├── pages/
+│   │   ├── LandingPage.tsx  # Home & brand upload
+│   │   └── ChatPage.tsx     # Multi-session chat UI
+│   └── components/          # Reusable UI components
+```
+
+### Data Directory
+
+```
+data/
+├── vectors/              # FAISS indices (per brand)
+├── ingest/              # Uploaded documents (per brand)
+├── generated_content/   # Generated images & videos
+└── app.db              # SQLite database
+```
+
+## Models Used
+
+| Component | GPU Model | CPU Fallback | Purpose |
+|-----------|-----------|--------------|---------|
+| **Embeddings** | sentence-transformers/all-MiniLM-L6-v2 | Same | Text embeddings for RAG |
+| **Vector DB** | FAISS (CPU/GPU) | FAISS (CPU) | Similarity search |
+| **Image Gen** | stabilityai/sd-turbo | SD ONNX (256x256) | Image generation |
+| **Video Gen** | stabilityai/stable-video-diffusion-img2vid-xt | Same (reduced settings) | Video generation |
+| **Caption** | Salesforce/blip-image-captioning-base | Same | Image validation |
+| **Text Safety** | Detoxify | Same | Toxicity detection |
+| **Image Safety** | NudeNet | Same | NSFW detection |
+
+## Configuration
+
+All settings are configurable via environment variables. Copy `.env.example` to `.env` and customize:
+
 ```bash
-poetry run fastapi dev app/main.py
+# Core Settings
+API_PORT=8000
+WEB_PORT=3000
+DATA_DIR=./data
+USE_GPU_IF_AVAILABLE=true
+
+# Model Selection
+IMAGE_MODEL=sd-turbo        # sd-turbo, sd15, or onnx
+VIDEO_MODEL=svd-xt          # svd-xt
+EMBEDDINGS_MODEL=all-MiniLM-L6-v2
+CAPTION_MODEL=blip-base
+
+# Generation Settings
+IMAGE_SIZE=256              # Image dimensions
+IMAGE_STEPS=8               # Inference steps
+VIDEO_FRAMES=8              # Video frames
+VIDEO_STEPS=8               # Video inference steps
+VIDEO_FPS=8                 # Frames per second
+
+# RAG Settings
+RAG_CHUNK_SIZE=900          # Text chunk size
+RAG_CHUNK_OVERLAP=120       # Chunk overlap
+RAG_TOP_K=5                 # Top results to retrieve
+
+# Safety
+ENABLE_SAFETY_CHECKS=true
+ENABLE_WATERMARK=true
 ```
-
-The backend will be available at `http://localhost:8000`
-
-**Note**: The first time you generate content, the AI models will be downloaded automatically. This may take several minutes and requires significant disk space (~10GB for Stable Diffusion XL, ~5GB for ModelScope).
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`
-
-## Usage
-
-### 1. Upload Brand Metadata (Optional)
-
-Before generating content, you can upload brand metadata to enable RAG-enhanced prompts.
-
-**Brand Metadata Format (CSV/Excel)**:
-```csv
-brand_key,brand_value
-tone_of_voice,Warm and caring
-brand_communications,Emphasizes real beauty and self-confidence
-visual_style,Natural and authentic
-color_palette,Soft whites and blues
-target_audience,Women of all ages
-brand_values,Inclusivity and empowerment
-messaging_style,Positive and uplifting
-imagery_focus,Real people in everyday situations
-```
-
-**Upload via API**:
-```bash
-curl -X POST "http://localhost:8000/api/brands/upload?brand_name=Dove" \
-  -F "file=@dove_metadata.csv"
-```
-
-A sample template is provided at `backend/data/brand_metadata/sample_brand_template.csv`
-
-### 2. Generate Content
-
-1. Open the frontend at `http://localhost:5173`
-2. Click on either "Image Generation" or "Video Generation" tile
-3. (Optional) Select a brand from the dropdown if you've uploaded brand metadata
-4. Type your prompt in the chat interface
-5. Press Enter or click Send
-6. Wait for the AI to generate your content
-7. Download the generated content using the download button
-
-### 3. Example Prompts
-
-**Without Brand Context**:
-- "A beautiful sunset over the ocean"
-- "A person running in a park"
-
-**With Brand Context** (e.g., Dove):
-- "Make me a campaign image for Dove brand"
-- "Create a video showing real beauty"
-
-The RAG pipeline will automatically enhance your prompt with brand-specific metadata like tone of voice, visual style, and color palette.
 
 ## API Endpoints
 
-### Brand Management
-- `POST /api/brands/upload` - Upload brand metadata CSV/Excel
-- `GET /api/brands` - List all brands
-- `GET /api/brands/{brand_name}` - Get brand metadata
-- `DELETE /api/brands/{brand_name}` - Delete brand
+### Sessions
+- `POST /api/sessions` - Create new chat session
+- `GET /api/sessions` - List all sessions
+- `GET /api/sessions/{id}` - Get session details
+- `DELETE /api/sessions/{id}` - Delete session
 
-### Content Generation
-- `POST /api/generate/image` - Generate image
-- `POST /api/generate/video` - Generate video
-- `POST /api/chat` - Chat-based generation
+### Chat History
+- `GET /api/history/{session_id}` - Get session messages
 
-### Health Check
-- `GET /healthz` - Health check endpoint
+### RAG
+- `POST /api/rag/ingest` - Ingest documents for a brand
+- `GET /api/rag/brands` - List all brands
+- `POST /api/rag/retrieve` - Retrieve relevant context
+- `DELETE /api/rag/brands/{brand_id}` - Delete brand data
 
-### API Documentation
-Interactive API documentation is available at `http://localhost:8000/docs`
+### Templates
+- `GET /api/templates` - List all templates
+- `GET /api/templates/{id}` - Get template details
+- `POST /api/templates/fill` - Fill template with values
 
-## Project Structure
+### Generation
+- `POST /api/generate/image` - Generate image directly
+- `POST /api/generate/video` - Generate video directly
 
-```
-poc-ai-content-gen/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                 # FastAPI application
-│   │   ├── models/
-│   │   │   └── schemas.py          # Pydantic models
-│   │   ├── services/
-│   │   │   ├── vector_db.py        # ChromaDB service
-│   │   │   ├── image_generator.py  # Stable Diffusion XL
-│   │   │   └── video_generator.py  # ModelScope
-│   │   └── utils/
-│   ├── data/
-│   │   ├── brand_metadata/         # Uploaded brand files
-│   │   ├── generated_content/      # Generated images/videos
-│   │   └── chroma_db/              # ChromaDB storage
-│   ├── pyproject.toml              # Python dependencies
-│   └── README.md
-│
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── LandingPage.tsx     # Home page with tiles
-│   │   │   └── ChatPage.tsx        # Chat interface
-│   │   ├── components/
-│   │   │   └── ui/                 # shadcn/ui components
-│   │   ├── App.tsx                 # Main app component
-│   │   └── main.tsx                # Entry point
-│   ├── package.json                # Node dependencies
-│   └── .env                        # Environment variables
-│
-└── README.md                       # This file
+### Agent
+- `POST /api/agent/chat` - Intelligent chat endpoint (auto-routes)
+
+## Testing
+
+```bash
+# Run acceptance tests
+make test
+
+# Or manually
+cd backend
+poetry run pytest tests/test_acceptance.py -v
 ```
 
-## RAG Pipeline Flow
+Tests verify:
+1. Database initialization and multi-session chat
+2. RAG pipeline with FAISS and embeddings
+3. Safety checks (Detoxify + NudeNet)
+4. Template system
+5. End-to-end generation flow
 
-1. **Upload**: Brand metadata is uploaded via CSV/Excel file
-2. **Ingestion**: Metadata is parsed and stored in ChromaDB vector database
-3. **Retrieval**: When generating content, the system retrieves brand metadata by brand name
-4. **Enhancement**: User prompt is enhanced with brand-specific context (tone, style, colors, etc.)
-5. **Generation**: Enhanced prompt is sent to AI model (Stable Diffusion XL or ModelScope)
-6. **Output**: Generated content is saved and returned to the user
+## Performance Expectations
 
-## Technical Details
+### GPU Mode (CUDA)
+- **Image Generation**: ~2-5 seconds (SD-Turbo), ~10-15 seconds (SD1.5)
+- **Video Generation**: ~30-60 seconds (25 frames, 256p)
+- **RAG Retrieval**: <1 second
 
-### Vector Database (ChromaDB)
-- Stores brand metadata as documents with embeddings
-- Enables semantic search and retrieval
-- Persistent storage in `backend/data/chroma_db/`
+### CPU Mode
+- **Image Generation**: ~30-60 seconds (ONNX, 256x256, 8 steps)
+- **Video Generation**: ~5-10 minutes (8 frames, 256p, 8 steps)
+- **RAG Retrieval**: <2 seconds
 
-### Image Generation (Stable Diffusion XL)
-- Model: `stabilityai/stable-diffusion-xl-base-1.0`
-- Resolution: 1024x1024 (configurable)
-- Inference steps: 30 (configurable)
-- Guidance scale: 7.5 (configurable)
+CPU mode uses reduced settings but produces **real model outputs** (no mocks).
 
-### Video Generation (ModelScope)
-- Model: `damo-vilab/text-to-video-ms-1.7b`
-- Frames: 16 (configurable)
-- FPS: 8
-- Inference steps: 25 (configurable)
+## Docker (Optional)
 
-### Prompt Enhancement
-The RAG pipeline enhances prompts by adding:
-- Tone of voice
-- Visual style
-- Color palette
-- Brand communications
-- Target audience context
+```bash
+# Start with docker-compose
+make up
 
-Example:
-```
-User prompt: "A person using skincare products"
-Enhanced prompt: "A person using skincare products, warm and caring tone, 
-natural and authentic style, using soft whites and blues colors, 
-emphasizes real beauty and self-confidence, appealing to women of all ages, 
-professional photography, high quality, detailed, 8k resolution"
+# Stop services
+make down
 ```
 
-## Performance Notes
-
-### First-Time Setup
-- Model downloads may take 10-30 minutes depending on internet speed
-- Stable Diffusion XL: ~10GB
-- ModelScope: ~5GB
-
-### Generation Times
-- **Image Generation**: 10-60 seconds (depending on GPU)
-- **Video Generation**: 1-5 minutes (depending on GPU)
-- **CPU-only**: 5-10x slower than GPU
-
-### Hardware Requirements
-- **Minimum**: 16GB RAM, CPU-only (slow)
-- **Recommended**: 16GB RAM, NVIDIA GPU with 8GB+ VRAM
-- **Optimal**: 32GB RAM, NVIDIA GPU with 16GB+ VRAM
+Docker is **optional**. The application is designed to run locally with Python venv + Node.
 
 ## Troubleshooting
 
-### Backend Issues
+### Out of Memory (GPU)
+- Reduce `IMAGE_SIZE` to 256 or 128
+- Reduce `VIDEO_FRAMES` to 8
+- Set `IMAGE_MODEL=onnx` to force CPU mode
 
-**Models not downloading**:
-- Check internet connection
-- Ensure sufficient disk space (~20GB free)
-- Check Hugging Face access (models are public)
+### Slow Generation (CPU)
+- This is expected on CPU
+- Reduce `IMAGE_STEPS` to 6-8
+- Reduce `VIDEO_FRAMES` to 8
+- Increase `TEST_TIMEOUT_SEC` for tests
 
-**Out of memory errors**:
-- Reduce image resolution
-- Reduce number of inference steps
-- Use CPU instead of GPU (slower but uses less memory)
+### Models Not Downloading
+- Ensure internet connection for first run
+- Models are cached in `~/.cache/huggingface/`
+- Check disk space (models are ~5-10GB total)
 
-**ChromaDB errors**:
-- Delete `backend/data/chroma_db/` and restart
-- Check file permissions
+### FAISS Index Errors
+- Delete `data/vectors/` and re-ingest documents
+- Ensure consistent embedding model
 
-### Frontend Issues
+## Development
 
-**Cannot connect to backend**:
-- Ensure backend is running on port 8000
-- Check CORS settings in backend
-- Verify `.env` file has correct API URL
+```bash
+# Clean generated files
+make clean
 
-**Images/videos not displaying**:
-- Check browser console for errors
-- Verify media files exist in `backend/data/generated_content/`
-- Check file permissions
+# Seed database
+make seed
 
-## Future Enhancements
+# Ingest sample documents
+make ingest
+```
 
-- [ ] Support for more AI models
-- [ ] Batch generation
-- [ ] Advanced prompt templates
-- [ ] User authentication
-- [ ] Generation history
-- [ ] Model fine-tuning with brand assets
-- [ ] Multi-language support
-- [ ] Cloud deployment guide
+## Architecture Decisions
+
+### Why FAISS over ChromaDB?
+- Lighter weight, no server required
+- Better performance for small-to-medium datasets
+- Easier to deploy and maintain
+
+### Why SQLite over PostgreSQL?
+- Local-first design
+- No external dependencies
+- Sufficient for POC scale
+- Easy backup and migration
+
+### Why Sentence-Transformers?
+- Fast, efficient embeddings
+- Good quality for RAG use cases
+- Works well on CPU
+
+### Why SD-Turbo?
+- 4x faster than SD1.5
+- Good quality for POC
+- Lower VRAM requirements
 
 ## License
 
-This is a proof-of-concept project for demonstration purposes.
+This is a proof-of-concept project. All models used are open-source with their respective licenses.
 
-## Credits
+## Contributing
 
-- **Stable Diffusion XL** by Stability AI
-- **ModelScope** by Alibaba DAMO Academy
-- **ChromaDB** by Chroma
-- **FastAPI** by Sebastián Ramírez
-- **React** by Meta
-- **shadcn/ui** by shadcn
+This is a POC project. For production use, consider:
+- Adding authentication and authorization
+- Implementing rate limiting
+- Adding monitoring and logging
+- Using a production database
+- Implementing proper error handling
+- Adding comprehensive test coverage
+- Optimizing model loading and caching
 
-## Support
+## Acknowledgments
 
-For issues or questions, please refer to the documentation or create an issue in the repository.
+Built with:
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [Diffusers](https://huggingface.co/docs/diffusers/)
+- [Sentence-Transformers](https://www.sbert.net/)
+- [FAISS](https://github.com/facebookresearch/faiss)
+- [React](https://react.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)

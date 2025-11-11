@@ -4,37 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Send, Download, Loader2, Image as ImageIcon, Video as VideoIcon, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Download, Loader2, Image as ImageIcon, Video as VideoIcon, Sparkles, Plus, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface Message {
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video';
-  timestamp: Date;
+  media_url?: string;
+  media_type?: 'image' | 'video';
+  timestamp: string;
+}
+
+interface Session {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function ChatPage() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [brands, setBrands] = useState<string[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string>('none');
-  const [generationMode, setGenerationMode] = useState<'auto' | 'image' | 'video'>('auto');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchBrands();
-    setMessages([
-      {
-        role: 'assistant',
-        content: `Welcome to AI Content Generator! I can help you create brand-compliant images and videos using AI. Simply describe what you want to create, and I'll generate it for you. You can also select a brand for enhanced, brand-compliant content.`,
-        timestamp: new Date()
-      }
-    ]);
+    fetchSessions();
   }, []);
 
   useEffect(() => {
@@ -47,73 +50,81 @@ export function ChatPage() {
 
   const fetchBrands = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/brands`);
+      const response = await axios.get(`${API_URL}/api/rag/brands`);
       setBrands(response.data.brands || []);
     } catch (error) {
       console.error('Error fetching brands:', error);
     }
   };
 
-  const detectGenerationType = (prompt: string): 'image' | 'video' => {
-    const lowerPrompt = prompt.toLowerCase();
-    const videoKeywords = ['video', 'clip', 'animate', 'animation', 'frames', 'fps', 'seconds', 'movie', 'footage'];
-    const imageKeywords = ['image', 'picture', 'photo', 'poster', 'banner'];
-    
-    const hasVideoKeyword = videoKeywords.some(keyword => lowerPrompt.includes(keyword));
-    const hasImageKeyword = imageKeywords.some(keyword => lowerPrompt.includes(keyword));
-    
-    if (hasVideoKeyword && !hasImageKeyword) return 'video';
-    if (hasImageKeyword && !hasVideoKeyword) return 'image';
-    
-    return 'image';
+  const fetchSessions = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/sessions`);
+      setSessions(response.data || []);
+      
+      if (response.data.length === 0) {
+        await createNewSession();
+      } else {
+        const mostRecent = response.data[0];
+        setCurrentSessionId(mostRecent.id);
+        await loadSessionHistory(mostRecent.id);
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    }
+  };
+
+  const createNewSession = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/api/sessions`, {
+        name: `Chat ${new Date().toLocaleString()}`
+      });
+      const newSession = response.data;
+      setSessions(prev => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      setMessages([]);
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  const loadSessionHistory = async (sessionId: string) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/history/${sessionId}`);
+      setMessages(response.data || []);
+    } catch (error) {
+      console.error('Error loading session history:', error);
+    }
+  };
+
+  const switchSession = async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    await loadSessionHistory(sessionId);
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !currentSessionId) return;
 
-    const userMessage: Message = {
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
     const userPrompt = input;
     setInput('');
     setIsGenerating(true);
 
     try {
-      let actualType: 'image' | 'video';
-      
-      if (generationMode === 'auto') {
-        actualType = detectGenerationType(userPrompt);
-      } else {
-        actualType = generationMode;
-      }
-      
-      const endpoint = actualType === 'image' ? '/api/generate/image' : '/api/generate/video';
-      
-      const response = await axios.post(`${API_URL}${endpoint}`, {
-        prompt: userPrompt,
-        brand_name: selectedBrand === 'none' ? null : selectedBrand
+      const response = await axios.post(`${API_URL}/api/agent/chat`, {
+        message: userPrompt,
+        session_id: currentSessionId,
+        brand_id: selectedBrand === 'none' ? null : selectedBrand
       });
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: `Generated ${actualType} successfully! ${selectedBrand ? `Using brand: ${selectedBrand}` : ''}`,
-        mediaUrl: `${API_URL}${response.data.media_url}`,
-        mediaType: actualType,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      await loadSessionHistory(currentSessionId);
     } catch (error: any) {
-      const errorMessage: Message = {
+      console.error('Error sending message:', error);
+      const errorMsg: Message = {
         role: 'assistant',
-        content: `Error generating content: ${error.response?.data?.detail || error.message}. ${error.response?.status === 404 ? 'Please upload brand metadata first.' : ''}`,
-        timestamp: new Date()
+        content: `Error: ${error.response?.data?.detail || error.message}`,
+        timestamp: new Date().toISOString()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsGenerating(false);
     }
@@ -150,47 +161,18 @@ export function ChatPage() {
               </Link>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
-                  U
+                  AI
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900">
                     AI Content Generator
                   </h1>
-                  <p className="text-xs text-slate-600">Image & Video Generation</p>
+                  <p className="text-xs text-slate-600">Multi-Session Chat</p>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">Mode:</span>
-                <Select value={generationMode} onValueChange={(value: 'auto' | 'image' | 'video') => setGenerationMode(value)}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        Auto
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="image">
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4" />
-                        Image
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="video">
-                      <div className="flex items-center gap-2">
-                        <VideoIcon className="w-4 h-4" />
-                        Video
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {brands.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-600">Brand:</span>
@@ -209,12 +191,16 @@ export function ChatPage() {
                   </Select>
                 </div>
               )}
+              <Button onClick={createNewSession} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                New Chat
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <div className="container mx-auto px-4 py-6 max-w-7xl flex gap-4">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {messages.map((message, index) => (
