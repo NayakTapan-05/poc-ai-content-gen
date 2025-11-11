@@ -198,14 +198,14 @@ export function ChatPage() {
                   {message.media_url && message.media_type === 'image' && (
                     <div className="mt-4 space-y-2">
                       <img
-                        src={message.media_url}
+                        src={`${API_URL}${message.media_url}`}
                         alt="Generated content"
                         className="rounded-lg max-w-full h-auto"
                       />
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleDownload(message.media_url!, 'image')}
+                        onClick={() => handleDownload(`${API_URL}${message.media_url}`, 'image')}
                         className="w-full"
                       >
                         <Download className="w-4 h-4 mr-2" />
@@ -217,14 +217,14 @@ export function ChatPage() {
                   {message.media_url && message.media_type === 'video' && (
                     <div className="mt-4 space-y-2">
                       <video
-                        src={message.media_url}
+                        src={`${API_URL}${message.media_url}`}
                         controls
                         className="rounded-lg max-w-full h-auto"
                       />
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleDownload(message.media_url!, 'video')}
+                        onClick={() => handleDownload(`${API_URL}${message.media_url}`, 'video')}
                         className="w-full"
                       >
                         <Download className="w-4 h-4 mr-2" />
