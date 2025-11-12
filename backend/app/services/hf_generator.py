@@ -1,6 +1,7 @@
 """
 Hugging Face Inference API Integration
 Supports both Inference API and Inference Endpoints
+Uses direct API calls to avoid InferenceClient bugs
 """
 
 import os
@@ -8,19 +9,22 @@ import io
 import base64
 from pathlib import Path
 from typing import Optional, Dict, Any
-from huggingface_hub import InferenceClient
 import requests
 from PIL import Image
+import logging
+
+logger = logging.getLogger(__name__)
 
 class HFGenerator:
-    """Hugging Face generation service"""
+    """Hugging Face generation service using direct API calls"""
     
     def __init__(self):
         self.hf_token = os.getenv("HF_TOKEN")
         if not self.hf_token:
             raise ValueError("HF_TOKEN environment variable not set")
         
-        self.client = InferenceClient(token=self.hf_token)
+        self.api_base = "https://api-inference.huggingface.co/models"
+        self.headers = {"Authorization": f"Bearer {self.hf_token}"}
         
         self.image_models = {
             "sd-turbo": "stabilityai/sd-turbo",
@@ -61,15 +65,30 @@ class HFGenerator:
         """
         try:
             model_name = self.image_models.get(model_id, self.image_models["sd-turbo"])
+            api_url = f"{self.api_base}/{model_name}"
             
-            image_bytes = self.client.text_to_image(
-                prompt=prompt,
-                model=model_name,
-                width=width,
-                height=height,
-                num_inference_steps=num_inference_steps,
-                guidance_scale=guidance_scale
-            )
+            payload = {
+                "inputs": prompt,
+                "parameters": {
+                    "num_inference_steps": num_inference_steps,
+                    "guidance_scale": guidance_scale,
+                    "width": width,
+                    "height": height
+                }
+            }
+            
+            if seed is not None:
+                payload["parameters"]["seed"] = seed
+            
+            logger.info(f"Calling HF API: {api_url}")
+            response = requests.post(api_url, headers=self.headers, json=payload, timeout=60)
+            
+            if response.status_code != 200:
+                error_detail = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"HF API error: {error_detail}")
+                raise Exception(error_detail)
+            
+            image_bytes = response.content
             
             import time
             filename = f"image_{int(time.time())}_{seed or 'random'}.png"
@@ -77,6 +96,8 @@ class HFGenerator:
             
             with open(filepath, "wb") as f:
                 f.write(image_bytes)
+            
+            logger.info(f"Generated image saved to {filepath}")
             
             return {
                 "media_url": f"/media/{filename}",
@@ -96,8 +117,7 @@ class HFGenerator:
                     error_msg = f"{error_msg} | Response: {e.response.text}"
                 except:
                     pass
-            if hasattr(e, 'status_code'):
-                error_msg = f"HTTP {e.status_code}: {error_msg}"
+            logger.error(f"Image generation failed: {error_msg}")
             raise Exception(f"HF image generation failed: {error_msg}")
     
     def generate_video(
