@@ -90,7 +90,15 @@ class HFGenerator:
             }
         
         except Exception as e:
-            raise Exception(f"HF image generation failed: {str(e)}")
+            error_msg = str(e)
+            if hasattr(e, 'response'):
+                try:
+                    error_msg = f"{error_msg} | Response: {e.response.text}"
+                except:
+                    pass
+            if hasattr(e, 'status_code'):
+                error_msg = f"HTTP {e.status_code}: {error_msg}"
+            raise Exception(f"HF image generation failed: {error_msg}")
     
     def generate_video(
         self,
