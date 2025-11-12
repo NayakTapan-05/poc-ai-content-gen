@@ -7,6 +7,9 @@ import logging
 import json
 from pathlib import Path
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from app.models.schemas import (
     GenerateImageRequest,

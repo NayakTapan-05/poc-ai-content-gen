@@ -6,8 +6,13 @@ Fast, local-first with HF Inference API integration
 import streamlit as st
 import requests
 import json
+import os
 from pathlib import Path
 import sys
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent / "backend" / ".env"
+load_dotenv(env_path)
 
 sys.path.append(str(Path(__file__).parent.parent / "backend"))
 
@@ -83,7 +88,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-API_URL = "http://localhost:8000"
+API_PORT = os.getenv("API_PORT", "8000")
+API_URL = f"http://localhost:{API_PORT}"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -163,14 +169,17 @@ if st.session_state.show_template_picker:
                                 })
                                 
                                 with st.spinner("Generating image..."):
+                                    data = {
+                                        "type": "image",
+                                        "prompt": prompt,
+                                        "model_id": "sd-turbo"
+                                    }
+                                    if field_values.get("brand"):
+                                        data["brand_name"] = field_values.get("brand")
+                                    
                                     gen_response = requests.post(
                                         f"{API_URL}/api/generate",
-                                        json={
-                                            "type": "image",
-                                            "prompt": prompt,
-                                            "brand_name": field_values.get("brand"),
-                                            "model_id": "sd-turbo"
-                                        }
+                                        data=data
                                     )
                                     
                                     if gen_response.status_code == 200:
@@ -245,19 +254,23 @@ if st.session_state.show_template_picker:
                                     "content": f"Generate video: {prompt}"
                                 })
                                 
-                                files = {}
-                                if uploaded_image:
-                                    files["image"] = uploaded_image.getvalue()
-                                
                                 with st.spinner("Generating video..."):
+                                    data = {
+                                        "type": "video",
+                                        "prompt": prompt,
+                                        "model_id": "svd-img2vid"
+                                    }
+                                    if field_values.get("brand"):
+                                        data["brand_name"] = field_values.get("brand")
+                                    
+                                    files = {}
+                                    if uploaded_image:
+                                        files["image"] = ("image.png", uploaded_image.getvalue(), "image/png")
+                                    
                                     gen_response = requests.post(
                                         f"{API_URL}/api/generate",
-                                        json={
-                                            "type": "video",
-                                            "prompt": prompt,
-                                            "brand_name": field_values.get("brand"),
-                                            "model_id": "svd-img2vid"
-                                        }
+                                        data=data,
+                                        files=files if files else None
                                     )
                                     
                                     if gen_response.status_code == 200:
@@ -486,11 +499,12 @@ elif page == "⚙️ Settings":
     st.caption("Read-only view of environment variables")
     
     env_vars = {
-        "HF_TOKEN": "***" if st.secrets.get("HF_TOKEN") else "Not set",
-        "ENGINE_IMAGE": "hf",
-        "ENGINE_VIDEO": "hf",
-        "IMAGE_MODEL": "sd-turbo",
-        "VIDEO_MODEL": "svd-img2vid"
+        "HF_TOKEN": "***" if os.getenv("HF_TOKEN") else "Not set",
+        "ENGINE_IMAGE": os.getenv("ENGINE_IMAGE", "hf"),
+        "ENGINE_VIDEO": os.getenv("ENGINE_VIDEO", "hf"),
+        "IMAGE_MODEL": os.getenv("IMAGE_MODEL", "sd-turbo"),
+        "VIDEO_MODEL": os.getenv("VIDEO_MODEL", "svd-img2vid"),
+        "API_PORT": os.getenv("API_PORT", "8000")
     }
     
     for key, value in env_vars.items():
