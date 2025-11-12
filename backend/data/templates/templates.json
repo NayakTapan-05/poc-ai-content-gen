@@ -1,0 +1,131 @@
+[
+  {
+    "id": "product_hero_image",
+    "type": "image",
+    "label": "Product Hero Image",
+    "description": "Professional product showcase image",
+    "fields": [
+      {
+        "name": "product",
+        "label": "Product Name",
+        "placeholder": "e.g., Dove Beauty Bar"
+      },
+      {
+        "name": "setting",
+        "label": "Setting/Background",
+        "placeholder": "e.g., bathroom counter, natural light"
+      },
+      {
+        "name": "mood",
+        "label": "Mood/Atmosphere",
+        "placeholder": "e.g., clean, fresh, inviting"
+      }
+    ],
+    "compose": "Professional product photography of {product}, placed on {setting}, {mood} atmosphere, high quality, commercial photography"
+  },
+  {
+    "id": "lifestyle_image",
+    "type": "image",
+    "label": "Lifestyle Image",
+    "description": "People using the product in real-life scenarios",
+    "fields": [
+      {
+        "name": "scenario",
+        "label": "Scenario",
+        "placeholder": "e.g., morning skincare routine"
+      },
+      {
+        "name": "person",
+        "label": "Person Description",
+        "placeholder": "e.g., woman in her 30s"
+      },
+      {
+        "name": "emotion",
+        "label": "Emotion/Feeling",
+        "placeholder": "e.g., confident, happy, relaxed"
+      }
+    ],
+    "compose": "Lifestyle photography showing {person} during {scenario}, feeling {emotion}, natural lighting, authentic moment, high quality"
+  },
+  {
+    "id": "social_media_post",
+    "type": "image",
+    "label": "Social Media Post",
+    "description": "Eye-catching image for social media",
+    "fields": [
+      {
+        "name": "concept",
+        "label": "Main Concept",
+        "placeholder": "e.g., self-care Sunday"
+      },
+      {
+        "name": "style",
+        "label": "Visual Style",
+        "placeholder": "e.g., minimalist, vibrant, cozy"
+      }
+    ],
+    "compose": "Social media content image featuring {concept}, {style} style, engaging composition, optimized for Instagram/Facebook"
+  },
+  {
+    "id": "promo_video_short",
+    "type": "video",
+    "label": "Short Promo Video",
+    "description": "15-30 second promotional video",
+    "fields": [
+      {
+        "name": "product",
+        "label": "Product Name",
+        "placeholder": "e.g., Dove Body Wash"
+      },
+      {
+        "name": "benefit",
+        "label": "Key Benefit",
+        "placeholder": "e.g., moisturizes skin"
+      },
+      {
+        "name": "vibe",
+        "label": "Video Vibe",
+        "placeholder": "e.g., energetic, calm, luxurious"
+      }
+    ],
+    "compose": "Short promotional video showcasing {product}, highlighting {benefit}, {vibe} vibe, smooth transitions, professional quality"
+  },
+  {
+    "id": "product_demo_video",
+    "type": "video",
+    "label": "Product Demo Video",
+    "description": "Product demonstration or tutorial",
+    "fields": [
+      {
+        "name": "product",
+        "label": "Product Name",
+        "placeholder": "e.g., Dove Hair Care"
+      },
+      {
+        "name": "action",
+        "label": "Action/Demo",
+        "placeholder": "e.g., application process, before/after"
+      }
+    ],
+    "compose": "Product demonstration video of {product}, showing {action}, clear and instructive, professional cinematography"
+  },
+  {
+    "id": "brand_story_video",
+    "type": "video",
+    "label": "Brand Story Video",
+    "description": "Emotional brand narrative video",
+    "fields": [
+      {
+        "name": "theme",
+        "label": "Story Theme",
+        "placeholder": "e.g., real beauty, empowerment"
+      },
+      {
+        "name": "tone",
+        "label": "Emotional Tone",
+        "placeholder": "e.g., inspiring, heartwarming, uplifting"
+      }
+    ],
+    "compose": "Brand story video exploring {theme}, {tone} emotional tone, authentic storytelling, cinematic quality"
+  }
+]

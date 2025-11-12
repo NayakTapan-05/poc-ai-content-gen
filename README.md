@@ -4,7 +4,18 @@ A proof-of-concept application for AI-powered image and video generation with Re
 
 ## Overview
 
-This POC demonstrates a complete AI content generation system that uses:
+This POC demonstrates a complete AI content generation system with **two user interfaces**:
+
+### 🎨 Streamlit UI (NEW - HF-Focused)
+- **Hugging Face Inference API** for fast, cloud-based generation
+- **FAISS** vector database for brand metadata
+- **Floating Action Button (FAB)** with template picker
+- **Chat interface** with multi-turn conversations
+- **Brand data upload** (CSV/XLSX/PDF/TXT)
+- **Runtime model selection** (2 image + 2 video models)
+- **Local diffusers fallback** when HF unavailable
+
+### 🌐 React UI (Original)
 - **ChromaDB** vector database for storing brand metadata
 - **Stable Diffusion XL** for image generation
 - **ModelScope Text-to-Video** for video generation
@@ -52,14 +63,51 @@ This POC demonstrates a complete AI content generation system that uses:
    - Select brand for generation
    - Delete brand data
 
-## Setup Instructions
+## Quick Start (Streamlit UI)
 
 ### Prerequisites
-- Python 3.12 or higher
-- Node.js 18 or higher
+- Python 3.10 or higher
 - Poetry (Python package manager)
-- npm or yarn
+- Hugging Face account and token (see [SETUP_HF.md](SETUP_HF.md))
+
+### Setup
+
+1. **Clone the repository**:
+```bash
+git clone https://github.com/NayakTapan-05/poc-ai-content-gen.git
+cd poc-ai-content-gen
+```
+
+2. **Set up Hugging Face token** (see [SETUP_HF.md](SETUP_HF.md)):
+```bash
+cd backend
+cp .env.example .env
+# Edit .env and add your HF_TOKEN
+```
+
+3. **Install dependencies**:
+```bash
+poetry install
+```
+
+4. **Run the Streamlit app**:
+```bash
+streamlit run apps/streamlit_app.py
+```
+
+5. **Open your browser**: http://localhost:8501
+
+The backend API will start automatically on port 8000.
+
+## Full Setup Instructions (Both UIs)
+
+### Prerequisites
+- Python 3.10 or higher
+- Node.js 18 or higher (for React UI)
+- Poetry (Python package manager)
+- npm or yarn (for React UI)
 - CUDA-compatible GPU (recommended for faster generation)
+- Hugging Face account and token (for Streamlit UI)
 
 ### Backend Setup
 
@@ -103,7 +151,44 @@ The frontend will be available at `http://localhost:5173`
 
 ## Usage
 
-### 1. Upload Brand Metadata (Optional)
+### Streamlit UI
+
+#### 1. Chat Interface
+- Navigate to the **💬 Chat** page
+- Type your request: "Generate an image of a sunset" or "Create a video for Dove brand"
+- The bot will detect intent and open the template picker
+- Or click the **➕ FAB button** (bottom-right) to manually open the template picker
+
+#### 2. Template Picker
+- Select **Image** or **Video** tab
+- Choose a template (Product Hero, Lifestyle, Social Media, etc.)
+- Fill in the template fields
+- Optionally select a brand for RAG-enhanced prompts
+- Click **Generate**
+
+#### 3. Brand Data Upload
+- Navigate to the **📁 Brand Data** page
+- Upload CSV/XLSX (with column mapping), PDF, or TXT files
+- View per-brand statistics (document count, vector count)
+
+#### 4. Settings
+- Navigate to the **⚙️ Settings** page
+- View available models (2 image + 2 video)
+- Configure generation parameters
+- View environment configuration
+
+#### 5. Model Selection
+**Image Models**:
+- `sd-turbo` - Stable Diffusion Turbo (fast, 4 steps)
+- `sd15` - Stable Diffusion 1.5 (higher quality, more steps)
+
+**Video Models**:
+- `svd-img2vid` - Stable Video Diffusion (img2vid)
+- `svd-xt` - Stable Video Diffusion (img2vid-xt, extended)
+
+### React UI
+
+#### 1. Upload Brand Metadata (Optional)
 
 Before generating content, you can upload brand metadata to enable RAG-enhanced prompts.
 
@@ -152,13 +237,20 @@ The RAG pipeline will automatically enhance your prompt with brand-specific meta
 
 ## API Endpoints
 
-### Brand Management
+### Streamlit-Focused Endpoints (NEW)
+- `GET /api/models` - Get available models (2 image + 2 video)
+- `POST /api/generate` - Unified generation endpoint (image/video)
+- `GET /api/templates` - Get template catalog
+- `GET /api/templates/{id}` - Get specific template
+- `POST /api/brand/upload` - Upload brand data (CSV/XLSX/PDF/TXT)
+- `GET /api/brand/list` - List all brands (FAISS)
+- `GET /api/rag/stats?brandId=` - Get per-brand RAG statistics
+
+### React UI Endpoints (Original)
 - `POST /api/brands/upload` - Upload brand metadata CSV/Excel
-- `GET /api/brands` - List all brands
+- `GET /api/brands` - List all brands (ChromaDB)
 - `GET /api/brands/{brand_name}` - Get brand metadata
 - `DELETE /api/brands/{brand_name}` - Delete brand
-
-### Content Generation
 - `POST /api/generate/image` - Generate image
 - `POST /api/generate/video` - Generate video
 - `POST /api/chat` - Chat-based generation
@@ -173,20 +265,30 @@ Interactive API documentation is available at `http://localhost:8000/docs`
 
 ```
 poc-ai-content-gen/
+├── apps/
+│   └── streamlit_app.py            # NEW: Streamlit UI
+│
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                 # FastAPI application
+│   │   ├── main.py                 # FastAPI application (extended)
 │   │   ├── models/
 │   │   │   └── schemas.py          # Pydantic models
 │   │   ├── services/
-│   │   │   ├── vector_db.py        # ChromaDB service
-│   │   │   ├── image_generator.py  # Stable Diffusion XL
-│   │   │   └── video_generator.py  # ModelScope
+│   │   │   ├── hf_generator.py     # NEW: HF Inference API
+│   │   │   ├── faiss_rag.py        # NEW: FAISS RAG service
+│   │   │   ├── brand_uploader.py   # NEW: Brand data ingestion
+│   │   │   ├── vector_db.py        # ChromaDB service (React UI)
+│   │   │   ├── image_generator.py  # Stable Diffusion XL (React UI)
+│   │   │   └── video_generator.py  # ModelScope (React UI)
 │   │   └── utils/
 │   ├── data/
-│   │   ├── brand_metadata/         # Uploaded brand files
+│   │   ├── templates/              # NEW: Template catalog
+│   │   ├── vectors/                # NEW: FAISS indices
+│   │   ├── ingest/                 # NEW: Ingested brand data
+│   │   ├── brand_metadata/         # Uploaded brand files (React UI)
 │   │   ├── generated_content/      # Generated images/videos
-│   │   └── chroma_db/              # ChromaDB storage
+│   │   └── chroma_db/              # ChromaDB storage (React UI)
+│   ├── .env.example                # NEW: Environment template
 │   ├── pyproject.toml              # Python dependencies
 │   └── README.md
 │
@@ -194,7 +296,7 @@ poc-ai-content-gen/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── LandingPage.tsx     # Home page with tiles
-│   │   │   └── ChatPage.tsx        # Chat interface
+│   │   │   └── ChatPage.tsx        # Unified chat interface
 │   │   ├── components/
 │   │   │   └── ui/                 # shadcn/ui components
 │   │   ├── App.tsx                 # Main app component
@@ -202,11 +304,25 @@ poc-ai-content-gen/
 │   ├── package.json                # Node dependencies
 │   └── .env                        # Environment variables
 │
+├── SETUP_HF.md                     # NEW: HF token setup guide
+├── QUICKSTART.md                   # Quick start guide
 └── README.md                       # This file
 ```
 
 ## RAG Pipeline Flow
 
+### Streamlit UI (FAISS-based)
+1. **Upload**: Brand data uploaded via CSV/XLSX (multi-brand), PDF, or TXT (single brand)
+2. **Parsing**: CSV/XLSX parsed with column mapping; PDF/TXT extracted with PyMuPDF
+3. **Chunking**: Text split into 500-character chunks with 50-character overlap
+4. **Embedding**: Chunks embedded using HF `intfloat/e5-small-v2` model
+5. **Storage**: Embeddings stored in brand-scoped FAISS indices (`/data/vectors/<brandId>.index`)
+6. **Retrieval**: When generating, top-K relevant chunks retrieved via semantic search
+7. **Enhancement**: User prompt enhanced with retrieved brand context
+8. **Generation**: Enhanced prompt sent to HF Inference API or local diffusers
+9. **Output**: Generated content saved and returned with download link
+
+### React UI (ChromaDB-based)
 1. **Upload**: Brand metadata is uploaded via CSV/Excel file
 2. **Ingestion**: Metadata is parsed and stored in ChromaDB vector database
 3. **Retrieval**: When generating content, the system retrieves brand metadata by brand name
@@ -216,18 +332,44 @@ poc-ai-content-gen/
 
 ## Technical Details
 
-### Vector Database (ChromaDB)
+### Streamlit UI
+
+**Generation Engines**:
+- **Default**: Hugging Face Inference API (hosted, fast)
+- **Fallback**: Local diffusers (CPU/GPU, slower but always available)
+
+**Image Models** (via HF Inference):
+- `stabilityai/sd-turbo` - 4 steps, fast generation
+- `runwayml/stable-diffusion-v1-5` - Higher quality, more steps
+
+**Video Models** (via HF Inference Endpoints):
+- `stabilityai/stable-video-diffusion-img2vid` - img2vid, 12 frames
+- `stabilityai/stable-video-diffusion-img2vid-xt` - Extended, 24 frames
+
+**Vector Database** (FAISS):
+- Brand-scoped indices stored in `/data/vectors/<brandId>.index`
+- Metadata stored in pickle files
+- Semantic search via cosine similarity (Inner Product)
+
+**Embedding Model**:
+- `intfloat/e5-small-v2` via HF Inference API
+- 384-dimensional embeddings
+- Normalized for cosine similarity
+
+### React UI
+
+**Vector Database** (ChromaDB):
 - Stores brand metadata as documents with embeddings
 - Enables semantic search and retrieval
 - Persistent storage in `backend/data/chroma_db/`
 
-### Image Generation (Stable Diffusion XL)
+**Image Generation** (Stable Diffusion XL):
 - Model: `stabilityai/stable-diffusion-xl-base-1.0`
 - Resolution: 1024x1024 (configurable)
 - Inference steps: 30 (configurable)
 - Guidance scale: 7.5 (configurable)
 
-### Video Generation (ModelScope)
+**Video Generation** (ModelScope):
 - Model: `damo-vilab/text-to-video-ms-1.7b`
 - Frames: 16 (configurable)
 - FPS: 8
